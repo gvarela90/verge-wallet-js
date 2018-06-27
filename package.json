@@ -15,7 +15,8 @@
     "buffer": "^5.1.0",
     "coinstring": "^2.3.0",
     "crypto": "^1.0.1",
-    "elliptic": "^6.4.0"
+    "elliptic": "^6.4.0",
+    "loadash": "^1.0.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",

@@ -135,7 +135,7 @@ export const serialize = (inputs, outputs, forSig) => {
 
   hexResult += encodingLength(outputs.length);
   outputs.forEach((output, i) => {
-    const amount = intToHex(output.amount, 8);
+    const amount = intToHex(output.value, 8);
     const script = payScript('address', output.address);
     const encodingLen = encodingLength(script.length / 2);
 
@@ -173,24 +173,4 @@ export const signHex = (hex, privateKey) => {
   }
 
   return derSign;
-}
-
-export const createSignedTransaction = (inputs, outputs, pubKey, privateKey) => {
-  let _inputs = inputs.map(input => ({
-    signatures: input.signatures || [],
-    address: input.address,
-    prevout_n: 0,
-    prevout_hash: input.txtid,
-    value: input.satoshis || input.value,
-    pubkeys: [pubKey],
-    coinbase: false,
-    num_sig: 1
-  }));
-
-  _inputs.forEach((input, i) => {
-    const forSig = serialize(_inputs, outputs, i);
-    input['signatures'] = [signHex(forSig, privateKey)];
-  });
-
-  return serialize(_inputs, outputs, undefined);
 }
