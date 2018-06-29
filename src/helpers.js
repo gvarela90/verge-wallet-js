@@ -75,7 +75,8 @@ export const inputScript = (txin, i, forSig) => {
       const initialSig = Array(0x48).fill("00").join('')
       sigList = Array(num_sig).fill(initialSig);
     } else if (isComplete) {
-      sigList = signatures.map(sig => `${sig}01`);
+      // sigList = signatures.map(sig => `${sig}01`);
+      sigList = signatures.map(sig => `${sig}`);
     } else {
       throw ('Error')
     }
@@ -117,11 +118,10 @@ export const payScript = (output_type, address) => {
 }
 
 export const serialize = (inputs, outputs, forSig) => {
-  // const pubkey = '03ac078054517087ef36f0e18f10b398511981449319df869225bf6fc05847cf8c';
-  // const xpubke = 'ff0488b21e0000000000000000008f21d7a6efcde6f62a6d85635dea90f99753e3e76190901f69f83d63a90958c503f7ae4a2c967e5d8bb29451898ce995cd734f1f024d1ddc132ec2498b24f81f5800000000'
   const version = intToHex(1, 4);
   const sequence = 'ffffffff';
-  const time = intToHex(Math.floor(Date.now() / 1000), 4);
+  // const time = intToHex(Math.floor(Date.now() / 1000), 4);
+  const time = intToHex(Math.floor("1530159677" / 1000), 4);
   const inputsAmount = encodingLength(inputs.length);
   let hexResult = version + time + inputsAmount;
   inputs.forEach((input, i) => {
@@ -144,7 +144,7 @@ export const serialize = (inputs, outputs, forSig) => {
 
   hexResult += intToHex(0, 4);
 
-  if (forSig && forSig !== -1) {
+  if (forSig !== undefined && forSig !== -1) {
     hexResult += intToHex(1, 4);
   }
 
@@ -157,15 +157,13 @@ const sha256 = function (buf) {
 };
 
 const sha256sha256 = function (buf) {
-  return sha256(sha256(buf));
+  return sha256(sha256(buf).toString('hex')).toString('hex');
 };
 
-export const signHex = (hex, privateKey) => {
-  const ec = new ECSDA('secp256k1');
-  const key = ec.keyFromPrivate(privateKey, 'hex');
-
-  let hexBuffer = new Buffer(hex, "hex");
-  const forSig = sha256sha256(hexBuffer).toString('hex');
+export const signHex = (hex, keys) => {
+  const key = keys.key;
+  let hexBuffer = new Buffer(keys.private, "hex");
+  const forSig = sha256sha256(hexBuffer);
   const signature = key.sign(forSig);
   const derSign = signature.toDER('hex');
   if (!key.verify(forSig, derSign)) {
@@ -173,4 +171,15 @@ export const signHex = (hex, privateKey) => {
   }
 
   return derSign;
+}
+
+export const getKeysFromPrivate = privateKey => {
+  const ec = new ECSDA('secp256k1');
+  const key = ec.keyFromPrivate(privateKey, 'hex');
+  return {
+    xPubKey: key.getPublic(false, 'hex'),
+    pubKey: key.getPublic(true, 'hex'),
+    private: key.getPrivate('hex'),
+    key: key
+  };
 }
