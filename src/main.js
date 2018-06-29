@@ -1,4 +1,7 @@
+
+import ElectrumClient from 'electrum-client';
 import Transaction from './transaction';
+
 let inputs = [
   {
     "address": "DQD44a6m4u8rvngXMczDSf7C6gtsJBHsvt",
@@ -7,38 +10,39 @@ let inputs = [
   }
 ];
 
-
 const pubkey = '02be14282fe266c5740b09abf6b5c5c8873c101afcf6dd7917961f3ff2de4104f9';
-const privateKey = 'CA7CB395F7BAFFABF2023DCAEBEDF8A14196748A6BBF149ACDF89DF868C6F5AE';
+const privateKey = '6Kfo8ouxqHuiY5bd2hKWsdeSV3csHCe6Ahrn4K3XGj6s9YhdXy4';
 
-
-
-// example with change
 let tx = new Transaction(privateKey);
 tx
-.from(inputs)
-.to("D95upq8MqqRDGhQgCv1L92bi2ccqR3NP77", 0.1)
-// .changeTo('DGeCok4UnibsTa5Tz6mPmyv35KD6CzzrSS')
-.sign();
+  .from(inputs)
+  .to("D95upq8MqqRDGhQgCv1L92bi2ccqR3NP77", 0.1)
+  .sign();
 
-console.log(tx.getSignedHex());
-console.log('\n');
-// example without change, the difference between 500,000 and 35000 goes to fee
-// let tx2 = new Transaction(privateKey);
-// tx2
-// .from(inputs)
-// .to("DQD44a6m4u8rvngXMczDSf7C6gtsJBHsvt", 350000)
-// .sign();
 
-// console.log(tx2.getSignedHex());
-// console.log('\n');
-// // example with change and fee
-// let tx3 = new Transaction(privateKey);
-// tx3
-// .from(inputs)
-// .to("DQD44a6m4u8rvngXMczDSf7C6gtsJBHsvt", 350000)
-// .fee(50000)
-// .changeTo('DGeCok4UnibsTa5Tz6mPmyv35KD6CzzrSS')
-// .sign();
+const raw = tx.getSignedHex()
 
-// console.log(tx3.getSignedHex());
+console.log(`RAW TX: ${raw}:`);
+
+const main = async () => {
+    console.log('begin connection');
+    const ecl = new ElectrumClient(50001, "electrum-verge.xyz", 'tcp')
+    await ecl.connect()
+    try{
+        const ver = await ecl.server_version("2.7.11", "1.0")
+        console.log(ver)
+        const balance = await ecl.blockchainAddress_getBalance(inputs[0].address)
+        console.log("balance", balance);
+        const unspent = await ecl.blockchainAddress_listunspent(inputs[0].address)
+        console.log("unspent", unspent);
+        const transaction = await ecl.blockchainTransaction_getDecoded(inputs[0].txtid)
+        console.log("transaction", transaction);
+        const broadcast = await ecl.blockchainTransaction_broadcast(raw);
+        console.log(broadcast);
+    }catch(e){
+        console.log(e)
+    }
+    await ecl.close()
+}
+main().catch(console.log)
+
