@@ -29,7 +29,6 @@ const ERRORS = {
 export default class Transaction {
   constructor(privateKey) {
     this.keys = getKeysFromPrivate(privateKey);
-    this.privateKey = privateKey;
     this.raw = undefined;
     this.inputs = [];
     this.outputs = [];
@@ -60,9 +59,9 @@ export default class Transaction {
 
     let fee = this._getFee();
     const changeAmount = unspendValue - fee;
-    if (changeAmount < 0){
-      throw (`Not enough funds. \nFEE=${fee} \nUNSPENTVALUE=${unspendValue} \nMISSING=${Math.abs(changeAmount)}`);
-    }
+    // if (changeAmount < 0){
+    //   throw (`Not enough funds. \nFEE=${fee} \nUNSPENTVALUE=${unspendValue} \nMISSING=${Math.abs(changeAmount)}`);
+    // }
 
 
   }
