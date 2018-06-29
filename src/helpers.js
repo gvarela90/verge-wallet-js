@@ -120,8 +120,8 @@ export const payScript = (output_type, address) => {
 export const serialize = (inputs, outputs, forSig) => {
   const version = intToHex(1, 4);
   const sequence = 'ffffffff';
-  // const time = intToHex(Math.floor(Date.now() / 1000), 4);
-  const time = intToHex(Math.floor("1530159677" / 1000), 4);
+  const time = intToHex(Math.floor(Date.now() / 1000), 4);
+  // const time = intToHex(Math.floor("1530159677" / 1000), 4);
   const inputsAmount = encodingLength(inputs.length);
   let hexResult = version + time + inputsAmount;
   inputs.forEach((input, i) => {
