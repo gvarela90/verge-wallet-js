@@ -1,15 +1,15 @@
 import Transaction from './transaction';
 let inputs = [
   {
-    "address": "D95upq8MqqRDGhQgCv1L92bi2ccqR3NP77",
-    "txtid": "c0f303f942ec355b5302e122f5daac9a52fd5411a7e916b0377596cf22727738",
-    "value": 7.5
+    "address": "DQD44a6m4u8rvngXMczDSf7C6gtsJBHsvt",
+    "txtid": "4ae59f827e62a7224a305334420d5a574f02c975a5098092e520001d7135ea73",
+    "value": 0.2
   }
 ];
 
 
 const pubkey = '02be14282fe266c5740b09abf6b5c5c8873c101afcf6dd7917961f3ff2de4104f9';
-const privateKey = '17e30544ee1aaa861e761a2ef2dbdff903cb026abaa9aa1b86894123d9f082ef';
+const privateKey = 'CA7CB395F7BAFFABF2023DCAEBEDF8A14196748A6BBF149ACDF89DF868C6F5AE';
 
 
 
@@ -17,7 +17,7 @@ const privateKey = '17e30544ee1aaa861e761a2ef2dbdff903cb026abaa9aa1b86894123d9f0
 let tx = new Transaction(privateKey);
 tx
 .from(inputs)
-.to("DQD44a6m4u8rvngXMczDSf7C6gtsJBHsvt", 0.2)
+.to("D95upq8MqqRDGhQgCv1L92bi2ccqR3NP77", 0.1)
 // .changeTo('DGeCok4UnibsTa5Tz6mPmyv35KD6CzzrSS')
 .sign();
 

@@ -75,8 +75,8 @@ export const inputScript = (txin, i, forSig) => {
       const initialSig = Array(0x48).fill("00").join('')
       sigList = Array(num_sig).fill(initialSig);
     } else if (isComplete) {
-      // sigList = signatures.map(sig => `${sig}01`);
-      sigList = signatures.map(sig => `${sig}`);
+      sigList = signatures.map(sig => `${sig}01`);
+      // sigList = signatures.map(sig => `${sig}`);
     } else {
       throw ('Error')
     }
@@ -162,7 +162,7 @@ const sha256sha256 = function (buf) {
 
 export const signHex = (hex, keys) => {
   const key = keys.key;
-  let hexBuffer = new Buffer(keys.private, "hex");
+  let hexBuffer = new Buffer(hex, "hex");
   const forSig = sha256sha256(hexBuffer);
   const signature = key.sign(forSig);
   const derSign = signature.toDER('hex');
