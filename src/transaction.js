@@ -174,7 +174,7 @@ export default class Transaction {
         signatures: [],
         address: input.address,
         prevout_n: input.vout || 0,
-        prevout_hash: input.txtid,
+        prevout_hash: input.txid,
         value: this._valueFromUser(input.value),
         pubkeys: [],
         x_pubkeys: [],
