@@ -75,8 +75,8 @@ export const inputScript = (txin, i, forSig) => {
       const initialSig = Array(0x48).fill("00").join('')
       sigList = Array(num_sig).fill(initialSig);
     } else if (isComplete) {
-      // sigList = signatures.map(sig => `${sig}01`);
-      sigList = signatures.map(sig => `${sig}`);
+      sigList = signatures.map(sig => `${sig}01`);
+      // sigList = signatures.map(sig => `${sig}`);
     } else {
       throw ('Error')
     }
@@ -117,10 +117,10 @@ export const payScript = (output_type, address) => {
   return script
 }
 
-export const serialize = (inputs, outputs, forSig) => {
+export const serialize = (inputs, outputs, forSig, nTime) => {
   const version = intToHex(1, 4);
   const sequence = 'ffffffff';
-  const _time = parseInt(Date.now().toString().substring(0, 10));
+  const _time = nTime ? nTime : Math.floor((new Date()).getTime() / 1000);
   const time = intToHex(_time, 4);
   const inputsAmount = encodingLength(inputs.length);
   let hexResult = version + time + inputsAmount;
@@ -144,7 +144,8 @@ export const serialize = (inputs, outputs, forSig) => {
 
   hexResult += intToHex(0, 4);
 
-  if (forSig !== undefined && forSig !== -1) {
+  if (![undefined, -1].includes(forSig)) {
+    // SIGHASH_ALL 0x01
     hexResult += intToHex(1, 4);
   }
 
@@ -157,7 +158,7 @@ const sha256 = function (buf) {
 };
 
 const sha256sha256 = function (buf) {
-  return sha256(sha256(buf).toString('hex')).toString('hex');
+  return sha256(sha256(buf));
 };
 
 export const signHex = (hex, keys) => {

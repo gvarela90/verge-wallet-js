@@ -27,8 +27,9 @@ const ERRORS = {
 }
 
 export default class Transaction {
-  constructor(privateKey) {
+  constructor(privateKey, nTime) {
     this.keys = getKeysFromPrivate(privateKey);
+    this.nTime = nTime ? parseInt(nTime) : Math.floor((new Date()).getTime() / 1000);
     this.raw = undefined;
     this.inputs = [];
     this.outputs = [];
@@ -109,7 +110,7 @@ export default class Transaction {
     this.inputs.forEach((input, i) => {
       input['x_pubkeys'] = [this.keys.pubKey];
       input['pubkeys'] = [this.keys.pubKey];
-      const forSig = serialize(this.inputs, this.outputs, i);
+      const forSig = serialize(this.inputs, this.outputs, i, this.nTime);
       input['signatures'] = [signHex(forSig, this.keys)];
     });
   }
@@ -127,7 +128,7 @@ export default class Transaction {
   }
 
   _estimatedSize() {
-    return parseInt(serialize(this.inputs, this.outputs, -1).length / 2);
+    return parseInt(serialize(this.inputs, this.outputs, -1, this.nTime).length / 2);
   }
 
   _estimatedFee() {
@@ -202,7 +203,7 @@ export default class Transaction {
     this._checkFunds();
     this._prepareTransaction();
 
-    this.raw = serialize(this.inputs, this.outputs, undefined);
+    this.raw = serialize(this.inputs, this.outputs, undefined, this.nTime);
     return this;
   }
   getSignedHex() {
