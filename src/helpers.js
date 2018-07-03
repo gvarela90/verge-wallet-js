@@ -76,7 +76,6 @@ export const inputScript = (txin, i, forSig) => {
       sigList = Array(num_sig).fill(initialSig);
     } else if (isComplete) {
       sigList = signatures.map(sig => `${sig}01`);
-      // sigList = signatures.map(sig => `${sig}`);
     } else {
       throw ('Error')
     }

@@ -162,7 +162,7 @@ export default class Transaction {
       this.inputs.push({
         signatures: [],
         address: input.address,
-        prevout_n: 0,
+        prevout_n: input.vout || 0,
         prevout_hash: input.txtid,
         value: this._valueFromUser(input.value),
         pubkeys: [this.keys.pubKey],
