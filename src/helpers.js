@@ -3,6 +3,7 @@ import coinstring from 'coinstring';
 import crypto from 'crypto';
 import { Buffer } from 'buffer';
 import { ec as ECSDA } from 'elliptic';
+import privateKey from './privateKey';
 
 String.prototype.rtrim = function () {
   return this.replace(/\s*$/g, "")
@@ -59,6 +60,12 @@ export const getReverseHexFromString = str => {
 }
 
 export const inputScript = (txin, i, forSig) => {
+  /*
+    forSig:
+      -1   : do not sign, estimate length
+       i>=0 : serialized tx for signing input i
+       undefined : add all known signatures
+  */
   const getScriptFromSignatures = sigList => sigList.map(x => pushScript(x)).join('');
 
   const num_sig = 1;
@@ -173,13 +180,6 @@ export const signHex = (hex, keys) => {
   return derSign;
 }
 
-export const getKeysFromPrivate = privateKey => {
-  const ec = new ECSDA('secp256k1');
-  const key = ec.keyFromPrivate(privateKey, 'hex');
-  return {
-    xPubKey: key.getPublic(false, 'hex'),
-    pubKey: key.getPublic(true, 'hex'),
-    private: key.getPrivate('hex'),
-    key: key
-  };
+export const getKeysFromPrivate = key => {
+  return privateKey(key);
 }

@@ -27,8 +27,8 @@ const ERRORS = {
 }
 
 export default class Transaction {
-  constructor(privateKey, nTime) {
-    this.keys = getKeysFromPrivate(privateKey);
+  constructor(nTime) {
+    this.keysByAddress = {};//getKeysFromPrivate(privateKey);
     this.nTime = nTime ? parseInt(nTime) : Math.floor((new Date()).getTime() / 1000);
     this.raw = undefined;
     this.inputs = [];
@@ -103,15 +103,26 @@ export default class Transaction {
     this._fee = fee;
   }
 
+  _prepareInputs(privateKeys){
+    privateKeys.forEach(privateKey => { 
+      const keys = getKeysFromPrivate(privateKey);
+      this.keysByAddress[keys.address] = keys;
+    });
+
+    this.inputs.forEach((input, i) => {
+      const keys = this.keysByAddress[input['address']];
+      input['x_pubkeys'] = [keys.pub];
+      input['pubkeys'] = [keys.pub];
+    });
+  }
+
   _prepareTransaction() {
     // 1. calculate fee, change and update outputs
     this._addChangeOutput();
     // 2. add signature
     this.inputs.forEach((input, i) => {
-      input['x_pubkeys'] = [this.keys.pubKey];
-      input['pubkeys'] = [this.keys.pubKey];
       const forSig = serialize(this.inputs, this.outputs, i, this.nTime);
-      input['signatures'] = [signHex(forSig, this.keys)];
+      input['signatures'] = [signHex(forSig, this.keysByAddress[input['address']])];
     });
   }
 
@@ -154,7 +165,7 @@ export default class Transaction {
 
   from(utxo) {
     this._checkSigned();
-    if (!isArray) {
+    if (!isArray(utxo)) {
       utxo = [utxo];
     }
 
@@ -165,8 +176,8 @@ export default class Transaction {
         prevout_n: input.vout || 0,
         prevout_hash: input.txtid,
         value: this._valueFromUser(input.value),
-        pubkeys: [this.keys.pubKey],
-        x_pubkeys: [this.keys.xPubKey],
+        pubkeys: [],
+        x_pubkeys: [],
         coinbase: false,
         num_sig: 1
       });
@@ -198,10 +209,14 @@ export default class Transaction {
     this._changeTo = address;
     return this;
   }
-  sign() {
+  sign(privateKeys) {
     this._checkSigned();
+    if (!isArray(privateKeys)) {
+      privateKeys = [privateKeys];
+    }
+    this._prepareInputs(privateKeys);
     this._checkFunds();
-    this._prepareTransaction();
+    this._prepareTransaction(privateKeys);
 
     this.raw = serialize(this.inputs, this.outputs, undefined, this.nTime);
     return this;
