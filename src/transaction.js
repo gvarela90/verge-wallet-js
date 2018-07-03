@@ -29,7 +29,7 @@ const ERRORS = {
 export default class Transaction {
   constructor(nTime) {
     this.keysByAddress = {};//getKeysFromPrivate(privateKey);
-    this.nTime = nTime ? parseInt(nTime) : Math.floor((new Date()).getTime() / 1000);
+    this.nTime =  parseInt(nTime ? parseInt(nTime) : Math.floor((new Date()).getTime() / 1000));
     this.raw = undefined;
     this.inputs = [];
     this.outputs = [];
