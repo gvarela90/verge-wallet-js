@@ -135,7 +135,11 @@ export default class Transaction {
   _getUnspentValue() {
     const inputs = this._getTotal(this.inputs);
     const outputs = this._getTotal(this.outputs);
-    return inputs - outputs;
+    const result = inputs - outputs;
+    if (isNaN(result)){
+      throw ('Unable to calculate the unspent value.')
+    }
+    return result;
   }
 
   _estimatedSize() {
@@ -175,7 +179,7 @@ export default class Transaction {
         address: input.address,
         prevout_n: input.vout || 0,
         prevout_hash: input.txid,
-        value: this._valueFromUser(input.value),
+        value: this._valueFromUser(input.value || input.amount),
         pubkeys: [],
         x_pubkeys: [],
         coinbase: false,
@@ -225,7 +229,7 @@ export default class Transaction {
     return this.raw;
   }
   fee(fee) {
-    this._fee = fee;
+    this._fee = this._valueFromUser(fee);
     return this;
   }
 }
