@@ -26,12 +26,7 @@ let tx = new Transaction()
   .to("DQD44a6m4u8rvngXMczDSf7C6gtsJBHsvt", 0.2)
   .changeTo('D8CxB96MkFz25jSrvhaf8M4MCx9XovpMr5')
   .sign(privateKey);
-// import {inputScript, serialize, intToHex, signHex} from './helpers';
-
-
-// console.log(serialize(tx.inputs, tx.outputs, 10, tx.nTime));
-// console.log('SIGN')
-// tx.sign()
+  
 const x = tx.getSignedHex();
 
 console.log(`VERGEd sendrawtransaction ${x}`)
