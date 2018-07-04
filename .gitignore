@@ -77,7 +77,6 @@ typings/
 /tmp
 /out-tsc
 .compiled/
-lib
 
 .vscode/launch.json
 .map
