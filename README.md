@@ -18,7 +18,7 @@ The private keys that must be included are the private keys corresponding to the
 
 **Note:** `Sign` function must be the last function to be chained/called, since once this function is called verge-js starts to generate the raw transaction.
 
-## Create transaction from 1 to utxo
+## Create transaction from 1 utxo
 
 ```javascript
 const Transaction = require('verge-js');
@@ -46,7 +46,7 @@ try {
 }
 ```
 
-## Create transaction from N to utxo
+## Create transaction from N utxo
 
 ```javascript
 const Transaction = require('verge-js');
