@@ -1,17 +1,11 @@
 import isArray from 'lodash/isArray';
 import isUndefined from 'lodash/isUndefined';
 import {
-  intToHex,
-  encodingLength,
-  getReverseHexFromString,
-  bcAddressToHash160,
-  inputScript,
-  payScript,
   serialize,
-  signHex,
-  getKeysFromPrivate,
-  createSignedTransaction
-} from './helpers';
+  sign
+} from './signSerialize';
+
+import getKeysFromPrivate from './privateKey';
 
 const COINS = 1000000;
 const CENT = 10000;
@@ -19,167 +13,171 @@ const CENT = 10000;
 const FEE_PER_KB = 100000;
 // Safe upper bound for change address script size in bytes
 const MIN_RELAY_TX_FEE = 10 * CENT;
-
 const MIN_TXOUT_AMOUNT = MIN_RELAY_TX_FEE;
-
 const ERRORS = {
-  signed: 'Transaction already signed'
-}
+  signed: 'Transaction already signed',
+  notFunds: 'Not enough funds',
+  invalidUnspentValue: 'Unable to calculate the unspent value.',
+  valueTooSmall: `Send amount too small, min value allow ${MIN_TXOUT_AMOUNT}`
+};
 
 export default class Transaction {
   constructor(nTime) {
-    this.keysByAddress = {};//getKeysFromPrivate(privateKey);
-    this.nTime =  parseInt(nTime ? parseInt(nTime) : Math.floor((new Date()).getTime() / 1000));
+    this.keysByAddress = {};
+    this.nTime = Number(nTime || Math.floor((new Date()).getTime() / 1000));
     this.raw = undefined;
     this.inputs = [];
     this.outputs = [];
-    this._to = {};
-    this._changeTo = undefined;
-    this._fee = undefined;
+    this.oChangeTo = undefined;
+    this.fee = undefined;
   }
 
-  _valueFromUser(amount) {
+  static valueFromUser(amount) {
     return amount * COINS;
   }
 
-  _valueForUser(amount) {
+  static valueForUser(amount) {
     return amount / COINS;
   }
 
-  _checkSigned() {
+  static getTotal(array) {
+    const reducer = (accumulator, item) => accumulator + item.value;
+    return array.reduce(reducer, 0);
+  }
+
+  checkSigned() {
     if (!isUndefined(this.raw)) {
       throw (ERRORS.signed);
     }
   }
 
-  _checkFunds() {
-    const unspendValue = this._getUnspentValue();
-    if (this._getUnspentValue() < 0) {
-      throw ('Not enough funds');
+  checkFunds() {
+    const unspendValue = this.getUnspentValue();
+    if (this.getUnspentValue() < 0) {
+      throw (ERRORS.notFunds);
     }
 
-    let fee = this._getFee();
+    const fee = this.getFee();
     const changeAmount = unspendValue - fee;
-    if (changeAmount < 0){
-      throw (`Not enough funds. \nFEE=${fee} \nUNSPENTVALUE=${unspendValue} \nMISSING=${Math.abs(changeAmount)}`);
-    }
-
-
-  }
-
-  _checkOutputsTotal() {
-    if (this._getTotal(this.outputs) < MIN_TXOUT_AMOUNT) {
-      throw (`Send amount too small, min value allow ${MIN_TXOUT_AMOUNT}`);
+    if (changeAmount < 0) {
+      throw new Error(`${ERRORS.notFunds}. \nFEE=${fee} \nUNSPENTVALUE=${unspendValue} \nMISSING=${Math.abs(changeAmount)}`);
     }
   }
 
-  _addChangeOutput() {
-    let fee = this._getFee();
-    
-    if (!isUndefined(this._changeTo)) {
-      let changeAmount = this._getUnspentValue() - fee;
+  checkOutputsTotal() {
+    if (Transaction.getTotal(this.outputs) < MIN_TXOUT_AMOUNT) {
+      throw (ERRORS.valueTooSmall);
+    }
+  }
+
+  addChangeOutput() {
+    let fee = this.getFee();
+
+    if (isUndefined(this.oChangeTo)) {
+      fee = this.getUnspentValue();
+    } else {
+      let changeAmount = this.getUnspentValue() - fee;
       if (changeAmount > 0) {
         this.outputs.push({
-          address: this._changeTo,
+          address: this.oChangeTo,
           value: changeAmount
         });
 
-        // recompute fee including change output and check 
+        // recompute fee including change output and check
         // if change amount is greater than 0
-        fee = this._getFee();
+        fee = this.getFee();
 
         // remove change output in order to get the correct unspent amount
         this.outputs.pop();
 
-        changeAmount = this._getUnspentValue() - this._getFee();
+        changeAmount = this.getUnspentValue() - this.getFee();
         if (changeAmount > 0) {
           this.outputs.push({
-            address: this._changeTo,
+            address: this.oChangeTo,
             value: changeAmount
           });
         }
       }
     }
-    this._fee = fee;
+
+    this.fee = fee;
   }
 
-  _prepareInputs(privateKeys){
-    privateKeys.forEach(privateKey => { 
+  prepareInputs(privateKeys) {
+    privateKeys.forEach((privateKey) => {
       const keys = getKeysFromPrivate(privateKey);
       this.keysByAddress[keys.address] = keys;
     });
 
-    this.inputs.forEach((input, i) => {
-      const keys = this.keysByAddress[input['address']];
-      input['x_pubkeys'] = [keys.pub];
-      input['pubkeys'] = [keys.pub];
+    this.inputs = this.inputs.map((input) => {
+      const keys = this.keysByAddress[input.address];
+      return {
+        ...input,
+        ...{
+          x_pubkeys: [keys.pub],
+          pubkeys: [keys.pub]
+        }
+      };
     });
   }
 
-  _prepareTransaction() {
+  prepareTransaction() {
     // 1. calculate fee, change and update outputs
-    this._addChangeOutput();
+    this.addChangeOutput();
     // 2. add signature
-    this.inputs.forEach((input, i) => {
+    this.inputs = this.inputs.map((input, i) => {
       const forSig = serialize(this.inputs, this.outputs, i, this.nTime);
-      input['signatures'] = [signHex(forSig, this.keysByAddress[input['address']])];
+      return {
+        ...input,
+        ...{
+          signatures: [sign(forSig, this.keysByAddress[input.address])]
+        }
+      };
     });
   }
 
-
-  _getTotal(array) {
-    const reducer = (accumulator, item) => accumulator + item.value;
-    return array.reduce(reducer, 0)
-  }
-
-  _getUnspentValue() {
-    const inputs = this._getTotal(this.inputs);
-    const outputs = this._getTotal(this.outputs);
+  getUnspentValue() {
+    const inputs = Transaction.getTotal(this.inputs);
+    const outputs = Transaction.getTotal(this.outputs);
     const result = inputs - outputs;
-    if (isNaN(result)){
-      throw ('Unable to calculate the unspent value.')
+    if (Number.isNaN(result)) {
+      throw new Error(ERRORS.invalidUnspentValue);
     }
     return result;
   }
 
-  _estimatedSize() {
-    return parseInt(serialize(this.inputs, this.outputs, -1, this.nTime).length / 2);
+  estimatedSize() {
+    return Number(serialize(this.inputs, this.outputs, -1, this.nTime).length / 2);
   }
 
-  _estimatedFee() {
-    const estimatedSize = this._estimatedSize();
+  estimatedFee() {
+    const estimatedSize = this.estimatedSize();
     let fee = Math.ceil(estimatedSize / 1000) * FEE_PER_KB;
     if (fee < MIN_RELAY_TX_FEE) {
-      fee = MIN_RELAY_TX_FEE
+      fee = MIN_RELAY_TX_FEE;
     }
     return fee;
   }
 
-  _getFee() {
-    if (!isUndefined(this._fee)) {
-      return this._fee;
+  getFee() {
+    if (!isUndefined(this.fee)) {
+      return this.fee;
     }
 
-    // if (isUndefined(this._changeTo)) {
-    //   return this._getUnspentValue();
-    // }
-
-    return this._estimatedFee();
+    return this.estimatedFee();
   }
 
   from(utxo) {
-    this._checkSigned();
-    if (!isArray(utxo)) {
-      utxo = [utxo];
-    }
+    this.checkSigned();
+    const utxoList = isArray(utxo) ? utxo : [utxo];
 
-    utxo.forEach(input => {
+    utxoList.forEach((input) => {
       this.inputs.push({
         signatures: [],
         address: input.address,
         prevout_n: input.vout || 0,
         prevout_hash: input.txid,
-        value: this._valueFromUser(input.value || input.amount),
+        value: Transaction.valueFromUser(input.value || input.amount),
         pubkeys: [],
         x_pubkeys: [],
         coinbase: false,
@@ -188,18 +186,17 @@ export default class Transaction {
     });
 
     return this;
-
   }
+
   to(address, value) {
-    this._checkSigned();
+    this.checkSigned();
     if (!this.outputs.length) {
-      value = this._valueFromUser(value);
       this.outputs.push({
         address,
-        value
+        value: Transaction.valueFromUser(value)
       });
       try {
-        this._checkOutputsTotal();
+        this.checkOutputsTotal();
       } catch (error) {
         this.outputs.pop();
         throw error;
@@ -208,28 +205,30 @@ export default class Transaction {
 
     return this;
   }
+
   changeTo(address) {
-    this._checkSigned();
-    this._changeTo = address;
+    this.checkSigned();
+    this.oChangeTo = address;
     return this;
   }
+
   sign(privateKeys) {
-    this._checkSigned();
-    if (!isArray(privateKeys)) {
-      privateKeys = [privateKeys];
-    }
-    this._prepareInputs(privateKeys);
-    this._checkFunds();
-    this._prepareTransaction(privateKeys);
+    this.checkSigned();
+    const privateKeyList = isArray(privateKeys) ? privateKeys : [privateKeys];
+    this.prepareInputs(privateKeyList);
+    this.checkFunds();
+    this.prepareTransaction(privateKeyList);
 
     this.raw = serialize(this.inputs, this.outputs, undefined, this.nTime);
     return this;
   }
-  getSignedHex() {
+
+  getRaw() {
     return this.raw;
   }
-  fee(fee) {
-    this._fee = this._valueFromUser(fee);
+
+  setFee(fee) {
+    this.fee = Transaction.valueFromUser(fee);
     return this;
   }
 }
